@@ -2,8 +2,20 @@ class ProxyStack
   helpers do
     def proxy_request!
       req = case request.request_method
-      when "GET"
+      when /get/i
         Net::HTTP::Get.new(request.path_info)
+      when /post/i
+        r = Net::HTTP::Post.new(request.path_info)
+        r.body = request.env['rack.input'].read
+        request.env['rack.input'].rewind
+        r
+      when /put/i
+        r = Net::HTTP::Put.new(request.path_info)
+        r.body = request.env['rack.input'].read
+        request.env['rack.input'].rewind
+        r
+      when /delete/i
+        Net::HTTP::Delete.new(request.path_info)
       end
 
       resp = Net::HTTP.start(configuration.proxy_domain, configuration.proxy_port) do |h|
