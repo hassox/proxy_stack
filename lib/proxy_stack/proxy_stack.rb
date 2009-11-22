@@ -1,21 +1,24 @@
 class ProxyStack
   helpers do
     def proxy_request!
-      req = case request.request_method
-      when /get/i
-        Net::HTTP::Get.new(request.path_info)
-      when /post/i
-        r = Net::HTTP::Post.new(request.path_info)
-        r.body = request.env['rack.input'].read
-        request.env['rack.input'].rewind
-        r
-      when /put/i
-        r = Net::HTTP::Put.new(request.path_info)
-        r.body = request.env['rack.input'].read
-        request.env['rack.input'].rewind
-        r
-      when /delete/i
-        Net::HTTP::Delete.new(request.path_info)
+      path = request.path_info
+
+      unless request.query_string.empty?
+        path = "#{path}?#{request.env['QUERY_STRING']}"
+      end
+
+      meth = request.request_method.downcase
+      meth[0..0] = meth[0..0].upcase
+      req = Net::HTTP.const_get(meth).new(path)
+
+      extract_http_headers.each do |(h,v)|
+        req[h] = v
+      end
+
+      if req.request_body_permitted?
+        req.content_length = request.content_length
+        req.content_type   = request.content_type
+        req.body_stream = request.body
       end
 
       resp = Net::HTTP.start(configuration.proxy_domain, configuration.proxy_port) do |h|
@@ -23,15 +26,19 @@ class ProxyStack
       end
       self.status = resp.code.to_i
       the_headers = []
-      resp.each_header{|h,v| the_headers << [h,v]}
+      resp.canonical_each{|h,v| the_headers << [h,v]}
       self.headers.replace(Hash[the_headers])
+
+      if headers["Location"]
+        headers["Location"] = URI.parse(headers['Location']).path
+      end
       resp.body
     end
 
     def extract_http_headers
       out = {}
       request.env.keys.each do |key|
-        if key. =~ /^[A-Z]/
+        if key. !~ /^(pancake|rack|cookie|content-length|transfer-encoding)/i
           out[key] = request.env[key]
         end
       end
@@ -39,7 +46,10 @@ class ProxyStack
     end
   end
 
-  any "/({*proxy_path_segements,.*})" do
+  Pancake::MimeTypes.type_by_extension(:json).type_strings << "application/x-javascript"
+
+  publish :provides => [:any]
+  any "/(*proxy_path_segments)" do
     proxy_request!
   end
 end

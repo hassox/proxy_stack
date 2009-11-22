@@ -10,7 +10,7 @@ begin
     gem.email = "has.sox@gmail.com"
     gem.homepage = "http://github.com/hassox/proxy_stack"
     gem.authors = ["Daniel Neighman"]
-    gem.add_dependency "pancake", ">=0.1.23"
+    gem.add_dependency "pancake", ">=0.1.24"
     gem.files = FileList["[A-Z]*", "pancake.init", "{lib,spec,rails}/**/*"]
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
