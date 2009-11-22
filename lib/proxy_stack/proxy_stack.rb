@@ -67,8 +67,8 @@ class ProxyStack
     @after_proxy = []
 
     private
-    def execute_blocks!(blocks)
-      blocks.each{|b| instance_eval(&b)}
+    def execute_blocks!(blks)
+      blks.each{|b| instance_eval(&b)}
     end
 
     def proxy_result
@@ -77,7 +77,7 @@ class ProxyStack
   end
 
   publish :provides => [:any]
-  any "/(*proxy_path_segments)" do
+  any "{.*}" do
     execute_blocks!(self.class.before_proxy)
     @proxy_result = proxy_request!
     execute_blocks!(self.class.after_proxy)
