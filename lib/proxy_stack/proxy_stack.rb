@@ -53,9 +53,31 @@ class ProxyStack
 
   Pancake::MimeTypes.type_by_extension(:json).type_strings << "application/x-javascript"
 
+  def self.before_proxy(&block)
+    self::Controller.before_proxy << block
+  end
+
+  def self.after_proxy(&block)
+    self::Controller.after_proxy << block
+  end
+
+  class self::Controller
+    class_inheritable_reader :before_proxy, :after_proxy
+    @before_proxy = []
+    @after_proxy = []
+
+    private
+    def execute_blocks!(blocks)
+      blocks.each{|b| instance_eval(&b)}
+    end
+  end
+
   publish :provides => [:any]
   any "/(*proxy_path_segments)" do
-    proxy_request!
+    execute_blocks!(self.class.before_proxy)
+    @result = proxy_request!
+    execute_blocks!(self.class.after_proxy)
+    @result
   end
 end
 
