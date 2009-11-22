@@ -43,7 +43,7 @@ class ProxyStack
     def extract_http_headers
       out = {}
       request.env.keys.each do |key|
-        if key. !~ /^(pancake|rack|content-length|transfer-encoding)/i
+        if key !~ /^(pancake|rack|content-length|transfer-encoding)/i
           out[key] = request.env[key]
         end
       end
