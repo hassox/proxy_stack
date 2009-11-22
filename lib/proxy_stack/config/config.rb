@@ -1,4 +1,3 @@
-require 'couchrest'
 require 'net/http'
 
 class ProxyStack::Configuration
