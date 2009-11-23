@@ -66,6 +66,35 @@ class ProxyStack
     @before_proxy = []
     @after_proxy = []
 
+    def proxy_request
+      execute_blocks!(self.class.before_proxy)
+      @proxy_result = proxy_request!
+      execute_blocks!(self.class.after_proxy)
+      @proxy_result
+    end
+
+    def dispatch!
+      begin
+        result = super
+        if result[0] == 404
+          Rack::Response.new(proxy_request, status, headers).finish
+        else
+          result
+        end
+      rescue Pancake::Errors::NotFound
+        Rack::Response.new(proxy_request, status, headers).finish
+      end
+    end
+
+    def log_http_error?(error)
+      case error
+      when Pancake::Errors::NotFound
+        false
+      else
+        true
+      end
+    end
+
     private
     def execute_blocks!(blks)
       blks.each{|b| instance_eval(&b)}
@@ -74,14 +103,6 @@ class ProxyStack
     def proxy_result
       @proxy_result
     end
-  end
-
-  publish :provides => [:any]
-  any "(/{*proxy_path_segements,.*}" do
-    execute_blocks!(self.class.before_proxy)
-    @proxy_result = proxy_request!
-    execute_blocks!(self.class.after_proxy)
-    @proxy_result
   end
 end
 
